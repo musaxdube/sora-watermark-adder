@@ -54,7 +54,7 @@ app.post("/upload", upload.single("video"), async (req: Request, res: Response) 
     const outputPath = "outputs/final.mp4";
 
     const fileId = uuidv4();
-    const progressFile = `processing/${fileId}.json`;
+    const progressFile = `https://sora-watermark-adder.vercel.app/processing/${fileId}.json`;
 
     fs.writeFileSync(progressFile, JSON.stringify({ status: "Starting...", percent: 0 }));
 

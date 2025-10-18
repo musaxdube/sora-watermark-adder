@@ -14,3 +14,4 @@ processing/
 
 # Mac
 .DS_Store
+.vercel
