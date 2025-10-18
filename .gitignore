@@ -1,0 +1,16 @@
+# Node
+node_modules/
+dist/
+.env
+*.log
+
+# Video output / uploads
+uploads/
+outputs/
+processing/
+
+# VSCode
+.vscode/
+
+# Mac
+.DS_Store
