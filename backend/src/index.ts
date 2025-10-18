@@ -54,7 +54,7 @@ app.post("/upload", upload.single("video"), async (req: Request, res: Response) 
     const outputPath = "outputs/final.mp4";
 
     const fileId = uuidv4();
-    const progressFile = `https://sora-watermark-adder.vercel.app/processing/${fileId}.json`;
+    const progressFile = `processing/${fileId}.json`;
 
     fs.writeFileSync(progressFile, JSON.stringify({ status: "Starting...", percent: 0 }));
 
@@ -108,6 +108,4 @@ app.post("/upload", upload.single("video"), async (req: Request, res: Response) 
 app.use(cors());
 
 
-app.listen(3000, () => {
-  console.log("Server started on http://localhost:3000");
-});
+export default app;

@@ -17,11 +17,10 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Node",
-    "rootDir": "backend/src",
+    "rootDir": "src",
     "outDir": "dist",
     "esModuleInterop": true,
     "strict": true,
-    "skipLibCheck": true,
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
@@ -46,7 +45,8 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    //"skipLibCheck": true,
+    "skipLibCheck": true,
   },
-  "include": ["backend/src"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
