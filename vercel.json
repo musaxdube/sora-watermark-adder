@@ -3,14 +3,19 @@
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
-    "api/index.ts": {
+    "api/health.ts": {
+      "maxDuration": 10
+    },
+    "api/upload.ts": {
       "includeFiles": "api/sorawatermark.mp4",
       "maxDuration": 60
     }
   },
   "routes": [
-    { "src": "/api/health", "dest": "/api/index.ts" },
-    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/api/health", "dest": "/api/health.ts" },
+    { "src": "/api/upload", "dest": "/api/upload.ts" },
+    { "src": "/api/progress/(.*)", "dest": "/api/index.ts" },
+    { "src": "/api/download/(.*)", "dest": "/api/index.ts" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
