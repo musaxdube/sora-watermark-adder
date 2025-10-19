@@ -8,9 +8,7 @@
     }
   },
   "routes": [
-    { "src": "/api/upload", "dest": "/api/index.ts" },
-    { "src": "/api/progress/(.*)", "dest": "/api/index.ts" },
-    { "src": "/api/download/(.*)", "dest": "/api/index.ts" },
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
