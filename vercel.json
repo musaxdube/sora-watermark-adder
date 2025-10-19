@@ -4,10 +4,12 @@
   "outputDirectory": "frontend/dist",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "api/sorawatermark.mp4"
+      "includeFiles": "api/sorawatermark.mp4",
+      "maxDuration": 60
     }
   },
   "routes": [
+    { "src": "/api/health", "dest": "/api/index.ts" },
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]

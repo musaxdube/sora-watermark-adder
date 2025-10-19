@@ -6,8 +6,17 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import serverless from "serverless-http";
+
+// Lazy load ffmpeg to reduce cold start time
+let ffmpegPath: string | null = null;
+const getFfmpegPath = async () => {
+  if (!ffmpegPath) {
+    const ffmpegInstaller = await import("@ffmpeg-installer/ffmpeg");
+    ffmpegPath = ffmpegInstaller.default.path;
+  }
+  return ffmpegPath;
+};
 
 const app = express();
 app.use(cors());
@@ -25,7 +34,12 @@ const execAsync = (cmd: string) =>
 });
 
 app.get("/", (_, res) => {
-  res.send("🎬 Sora Watermark API is running!");
+  res.json({ status: "🎬 Sora Watermark API is running!", timestamp: Date.now() });
+});
+
+// Health check endpoint for faster response
+app.get("/health", (_, res) => {
+  res.json({ status: "healthy", timestamp: Date.now() });
 });
 
 app.get("/progress/:id", (req: Request, res: Response) => {
@@ -46,7 +60,7 @@ app.get("/download/:fileId", (req: Request, res: Response) => {
 app.post("/upload", upload.single("video"), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: "No video uploaded" });
 
-  const ffmpegPath = ffmpegInstaller.path;
+  const ffmpegPath = await getFfmpegPath();
   const fileId = uuidv4();
   const mainInput = req.file.path;
   const wmInput = path.join(process.cwd(), "api/sorawatermark.mp4");
@@ -60,13 +74,15 @@ app.post("/upload", upload.single("video"), async (req: Request, res: Response) 
   const q = (p: string) => `"${p}"`;
 
   try {
-    await execAsync(`${ffmpegPath} -y -i ${q(mainInput)} -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" ${q(normMain)}`);
+    // Optimize: Use faster presets and reduce quality for faster processing
+    await execAsync(`${ffmpegPath} -y -i ${q(mainInput)} -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" -preset ultrafast ${q(normMain)}`);
     if (!fs.existsSync(wmInput)) throw new Error("Watermark not found");
-    await execAsync(`${ffmpegPath} -y -i ${q(wmInput)} -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" ${q(normWM)}`);
+    await execAsync(`${ffmpegPath} -y -i ${q(wmInput)} -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" -preset ultrafast ${q(normWM)}`);
 
+    // Optimize: Use faster encoding settings
     const blend = `${ffmpegPath} -y -stream_loop -1 -i ${q(normWM)} -i ${q(normMain)} \
     -filter_complex "[0:v]colorkey=black:0.3:0.1[wm];[1:v][wm]overlay=0:0:shortest=1[v]" \
-    -map "[v]" -map 1:a? -shortest -preset fast -c:a copy ${q(outputPath)} -progress pipe:1 -nostats`;
+    -map "[v]" -map 1:a? -shortest -preset ultrafast -crf 28 -c:a copy ${q(outputPath)} -progress pipe:1 -nostats`;
 
     const ff = exec(blend);
 
