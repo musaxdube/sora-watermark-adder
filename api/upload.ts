@@ -44,18 +44,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log('Upload request received:', req.method, req.headers);
+    
     // Process the file upload
     await new Promise((resolve, reject) => {
       uploadMiddleware(req as any, res as any, (err: any) => {
-        if (err) reject(err);
-        else resolve(undefined);
+        if (err) {
+          console.error('Multer error:', err);
+          reject(err);
+        } else {
+          console.log('File processed:', req.file ? 'Yes' : 'No');
+          resolve(undefined);
+        }
       });
     });
 
     // Check if file was uploaded
     if (!req.file) {
+      console.log('No file in request');
       return res.status(400).json({ error: 'No video file uploaded' });
     }
+
+    console.log('File details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
 
     // Ensure folders exist in /tmp
     ["/tmp/processing", "/tmp/norm", "/tmp/outputs", "/tmp/uploads"].forEach((dir) => {
