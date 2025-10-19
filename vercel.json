@@ -1,4 +1,16 @@
 {
+  "version": 2,
   "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/dist"
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "backend/src/index.ts": {
+      "includeFiles": ["backend/sorawatermark.mp4"]
+    }
+  },
+  "routes": [
+    { "src": "/api/upload", "dest": "/backend/src/index.ts" },
+    { "src": "/api/progress/(.*)", "dest": "/backend/src/index.ts" },
+    { "src": "/api/download/(.*)", "dest": "/backend/src/index.ts" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
