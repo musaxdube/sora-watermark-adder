@@ -26,6 +26,9 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
+// Multer middleware for handling file uploads
+const uploadMiddleware = upload.single('video');
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,19 +44,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // Process the file upload
+    await new Promise((resolve, reject) => {
+      uploadMiddleware(req as any, res as any, (err: any) => {
+        if (err) reject(err);
+        else resolve(undefined);
+      });
+    });
+
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
     // Ensure folders exist in /tmp
-    ["/tmp/processing", "/tmp/norm", "/tmp/outputs"].forEach((dir) => {
+    ["/tmp/processing", "/tmp/norm", "/tmp/outputs", "/tmp/uploads"].forEach((dir) => {
       if (!fs.existsSync(dir)) fs.mkdirSync(dir);
     });
 
-    const ffmpegPath = await getFfmpegPath();
     const fileId = uuidv4();
+    const tempFilePath = `/tmp/uploads/${fileId}_${req.file.originalname}`;
     
-    // For now, return a simple response to test the endpoint
+    // Write the uploaded file to temporary storage
+    fs.writeFileSync(tempFilePath, req.file.buffer);
+    
+    // For now, return success response (video processing will be implemented next)
     res.json({ 
       fileId, 
-      message: "Upload endpoint is working! Video processing will be implemented next.",
-      status: "ready"
+      message: "Video uploaded successfully! Processing will be implemented next.",
+      status: "uploaded",
+      progress: `/api/progress/${fileId}`
     });
 
   } catch (error: any) {

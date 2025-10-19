@@ -9,12 +9,15 @@
     "api/upload.ts": {
       "includeFiles": "api/sorawatermark.mp4",
       "maxDuration": 60
+    },
+    "api/progress/[id].ts": {
+      "maxDuration": 10
     }
   },
   "routes": [
     { "src": "/api/health", "dest": "/api/health.ts" },
     { "src": "/api/upload", "dest": "/api/upload.ts" },
-    { "src": "/api/progress/(.*)", "dest": "/api/index.ts" },
+    { "src": "/api/progress/(.*)", "dest": "/api/progress/[id].ts" },
     { "src": "/api/download/(.*)", "dest": "/api/index.ts" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/vite.svg", "dest": "/vite.svg" },
