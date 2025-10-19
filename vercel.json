@@ -1,21 +1,9 @@
 {
   "version": 2,
   "builds": [
-    { 
-      "src": "backend/src/index.ts", 
-      "use": "@vercel/node",
-      "config": { "includeFiles": ["backend/sorawatermark.mp4"] }
-    },
-    { 
-      "src": "frontend/package.json", 
-      "use": "@vercel/static-build", 
-      "config": { "distDir": "dist" } 
-    }
+    { "src": "frontend/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
   ],
   "routes": [
-    { "src": "/api/upload", "dest": "/backend/src/index.ts" },
-    { "src": "/api/progress/(.*)", "dest": "/backend/src/index.ts" },
-    { "src": "/api/download/(.*)", "dest": "/backend/src/index.ts" },
     { "src": "/(.*)", "dest": "/frontend/dist/$1" }
   ]
 }
