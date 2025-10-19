@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/upload": "https://sora-watermark-adder.vercel.app",
-      "/progress": "https://sora-watermark-adder.vercel.app",
-      "/download": "https://sora-watermark-adder.vercel.app",
+      "/upload": "http://localhost:3000",
+      "/progress": "http://localhost:3000",
+      "/download": "http://localhost:3000",
     },
   },
-})
+});

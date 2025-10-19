@@ -1,111 +1,96 @@
 import express from "express";
-import type { Request, Response, NextFunction } from 'express';
-import multer from "multer"; 
-import { exec} from "child_process";
+import type { Request, Response } from "express";
+import multer from "multer";
+import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import cors from "cors";
+import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import serverless from "serverless-http";
 
 const app = express();
-const upload = multer({ dest: "uploads/"});
+app.use(cors());
+
+const upload = multer({ dest: "/tmp/uploads/" });
 
 const execAsync = (cmd: string) =>
-    new Promise<void>((resolve, reject) => {
-        exec(cmd, (err, stdout, stderr) => {
-            if (err) return reject(err);
-            resolve();
-        });
-    });
+  new Promise<void>((resolve, reject) => {
+    exec(cmd, (err) => (err ? reject(err) : resolve()));
+  });
 
-["processing", "uploads", "norm", "outputs"].forEach((dir) => {
+// Ensure folders exist in /tmp (only temporary storage works on Vercel)
+["/tmp/processing", "/tmp/norm", "/tmp/outputs"].forEach((dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir);
 });
 
-app.use(cors());
+app.get("/", (_, res) => {
+  res.send("🎬 Sora Watermark API is running!");
+});
 
 app.get("/progress/:id", (req: Request, res: Response) => {
-  const progressFile = `processing/${req.params.id}.json`;
-  if (!fs.existsSync(progressFile)) return res.json({ status: "Unknown", percent: 0 });
+  const progressFile = `/tmp/processing/${req.params.id}.json`;
+  if (!fs.existsSync(progressFile))
+    return res.json({ status: "Unknown", percent: 0 });
   const data = JSON.parse(fs.readFileSync(progressFile, "utf-8"));
   res.json(data);
-// res.send(`
-//     <h1>🎬 Sora Watermark Server</h1>
-//     <p>Upload a video to test:</p>
-//     <form action="/upload" method="post" enctype="multipart/form-data">
-//       <input type="file" name="video" accept="video/*" />
-//       <button type="submit">Upload</button>
-//     </form>
-//   `);
 });
 
-app.get("/download/:fileId", (req, res) => {
-  res.download(`outputs/final.mp4`, "watermarked.mp4");
+app.get("/download/:fileId", (req: Request, res: Response) => {
+  const outputPath = `/tmp/outputs/final_${req.params.fileId}.mp4`;
+  if (!fs.existsSync(outputPath))
+    return res.status(404).json({ error: "File not found" });
+  res.download(outputPath, "watermarked.mp4");
 });
-
 
 app.post("/upload", upload.single("video"), async (req: Request, res: Response) => {
-    if (!req.file) return res.status(400).json({ error: "No video uploaded" });
+  if (!req.file) return res.status(400).json({ error: "No video uploaded" });
 
-    const mainInput = req.file.path;
-    const wmInput = "sorawatermark.mp4";
-    const normMain = "norm/norm_main.mp4";
-    const normWM = "norm/norm_wm.mp4";
-    const outputPath = "outputs/final.mp4";
+  const ffmpegPath = ffmpegInstaller.path;
+  const fileId = uuidv4();
+  const mainInput = req.file.path;
+  const wmInput = path.join(process.cwd(), "sorawatermark.mp4");
+  const normMain = `/tmp/norm/norm_main_${fileId}.mp4`;
+  const normWM = `/tmp/norm/norm_wm_${fileId}.mp4`;
+  const outputPath = `/tmp/outputs/final_${fileId}.mp4`;
+  const progressFile = `/tmp/processing/${fileId}.json`;
 
-    const fileId = uuidv4();
-    const progressFile = `processing/${fileId}.json`;
+  fs.writeFileSync(progressFile, JSON.stringify({ status: "Starting...", percent: 0 }));
 
-    fs.writeFileSync(progressFile, JSON.stringify({ status: "Starting...", percent: 0 }));
+  const q = (p: string) => `"${p}"`;
 
-    const qoute = (p: string) => `"${p}"`;
+  try {
+    await execAsync(`${ffmpegPath} -y -i ${q(mainInput)} -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" ${q(normMain)}`);
+    if (!fs.existsSync(wmInput)) throw new Error("Watermark not found");
+    await execAsync(`${ffmpegPath} -y -i ${q(wmInput)} -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" ${q(normWM)}`);
 
-    try {
-        
-        await execAsync(`ffmpeg -y -i "${mainInput}" -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" "${normMain}"`);
-        if (!fs.existsSync(wmInput)) throw new Error("Watermark not found");
-        await execAsync(`ffmpeg -y -i "${wmInput}" -vf "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280" "${normWM}"`);
+    const blend = `${ffmpegPath} -y -stream_loop -1 -i ${q(normWM)} -i ${q(normMain)} \
+    -filter_complex "[0:v]colorkey=black:0.3:0.1[wm];[1:v][wm]overlay=0:0:shortest=1[v]" \
+    -map "[v]" -map 1:a? -shortest -preset fast -c:a copy ${q(outputPath)} -progress pipe:1 -nostats`;
 
-        
-        const blend = `
-        ffmpeg -y -stream_loop -1 -i ${qoute(normWM)} -i ${qoute(normMain)} \
-        -filter_complex "[0:v]colorkey=black:0.3:0.1[wm];[1:v][wm]overlay=0:0:shortest=1[v]" \
-        -map "[v]" -map 1:a? -shortest -preset fast -c:a copy ${qoute(outputPath)} -progress pipe:1 -nostats
-        `;
-        const ff = exec(blend);
+    const ff = exec(blend);
 
-        ff.stdout?.on("data", (data: string) => {
-            const match = data.match(/out_time_ms=(\d+)/);
-            if (match && match[1]) {
-                const outTime = parseInt(match[1], 10);
-                const percent = Math.min(100, Math.floor((outTime / 60000) * 100));
-                fs.writeFileSync(progressFile, JSON.stringify({ status: "Processing...", percent }));
-            }
-        });
+    ff.stdout?.on("data", (data: string) => {
+      const match = data.match(/out_time_ms=(\d+)/);
+      if (match && match[1]) {
+        const percent = Math.min(100, Math.floor((parseInt(match[1]) / 60000) * 100));
+        fs.writeFileSync(progressFile, JSON.stringify({ status: "Processing...", percent }));
+      }
+    });
 
-        ff.on("close", () => {
-            fs.writeFileSync(progressFile, JSON.stringify({ status: "Done", percent: 100 }));
-            
-            [mainInput, normMain, normWM].forEach((f) => fs.existsSync(f) && fs.unlinkSync(f));
-        });
+    ff.on("close", () => {
+      fs.writeFileSync(progressFile, JSON.stringify({ status: "Done", percent: 100 }));
+    });
 
-        ff.on("error", (err) => {
-            fs.writeFileSync(progressFile, JSON.stringify({ status: "Error", percent: 0, error: err.message }));
-            console.error("FFmpeg process error:", err.message);
-        });
+    ff.on("error", (err) => {
+      fs.writeFileSync(progressFile, JSON.stringify({ status: "Error", error: err.message }));
+    });
 
-       
-        res.json({ fileId, message: "Processing started, track progress at /progress/:id" });
-
-    } catch (err: any) {
-        console.error("Video processing error:", err.message);
-        if (!res.headersSent)
-            res.status(500).json({ error: "Video processing failed", details: err.message });
-    }
+    res.json({ fileId, message: "Processing started", progress: `/progress/${fileId}` });
+  } catch (err: any) {
+    console.error("Processing failed:", err.message);
+    res.status(500).json({ error: "Processing failed", details: err.message });
+  }
 });
 
-
-app.use(cors());
-
-
-export default app;
+export default serverless(app);
