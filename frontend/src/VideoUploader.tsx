@@ -6,7 +6,7 @@ const VideoUploader: React.FC = () => {
   const [fileId, setFileId] = useState<string | null>(null);
   const [percent, setPercent] = useState<number>(0);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const API_BASE = "https://sora-watermark-api.vercel.app";
+  const API_BASE = "https://sora-watermark-adder.vercel.app";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
