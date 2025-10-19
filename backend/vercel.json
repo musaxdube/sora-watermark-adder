@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "backend/package.json", "use": "@vercel/node" },
+    { "src": "frontend/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/upload", "dest": "/backend/dist/index.js" },
+    { "src": "/progress/(.*)", "dest": "/backend/dist/index.js" },
+    { "src": "/download/(.*)", "dest": "/backend/dist/index.js" },
+    { "src": "/(.*)", "dest": "/frontend/dist/$1" }
+  ]
+}
