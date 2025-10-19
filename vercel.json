@@ -12,11 +12,15 @@
     },
     "api/progress/[id].ts": {
       "maxDuration": 10
+    },
+    "api/test.ts": {
+      "maxDuration": 10
     }
   },
   "routes": [
     { "src": "/api/health", "dest": "/api/health.ts" },
     { "src": "/api/upload", "dest": "/api/upload.ts" },
+    { "src": "/api/test", "dest": "/api/test.ts" },
     { "src": "/api/progress/(.*)", "dest": "/api/progress/[id].ts" },
     { "src": "/api/download/(.*)", "dest": "/api/index.ts" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
