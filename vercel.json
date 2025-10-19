@@ -16,6 +16,8 @@
     { "src": "/api/upload", "dest": "/api/upload.ts" },
     { "src": "/api/progress/(.*)", "dest": "/api/index.ts" },
     { "src": "/api/download/(.*)", "dest": "/api/index.ts" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/vite.svg", "dest": "/vite.svg" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
